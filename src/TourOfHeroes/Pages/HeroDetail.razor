@@ -1,0 +1,68 @@
+@page "/detail/{heroid}"
+
+@using TourOfHeroes.Data
+@using TourOfHeroes.Interfaces;
+
+@inject IJSRuntime JSRuntime
+@inject IHeroDataService HeroRepository
+
+<link href="css/herodetail.css" rel="stylesheet" />
+
+@if( MyHero != null )
+{
+<div>
+
+    <h2>@MyHero?.Name?.ToUpper() Details</h2>
+
+    <div><span>id: </span>@MyHero?.Id</div>
+    <div>
+        <label>name: 
+            <input placeholder="name" @bind="MyHero.Name" />
+        </label>
+    </div>
+    <button @onclick="GoBack" >Go Back</button>
+    <button @onclick="Save" >Save</button>
+</div>
+}
+
+@code
+{
+    [Parameter]
+    public string HeroId 
+    {
+        get => ((MyHero?.Id).HasValue ? MyHero.Id : default).ToString();
+        set 
+        {
+            if(!int.TryParse(value, out var id))
+            {
+                MyHero = null;
+                return;
+            }
+
+            var getHeroTask = Task<Hero>.Run(() => HeroRepository.FindHeroAsync(id));
+            getHeroTask.Wait();
+
+            MyHero = getHeroTask.Result;
+        }
+    }
+
+    private Hero MyHero { get; set;}
+
+    private async Task GoBack()
+    {
+        await JSRuntime.InvokeVoidAsync("window.history.back");
+    }
+
+    private async Task Save()
+    {
+        var updatedHero = await HeroRepository.SaveHeroAsync(MyHero);
+
+        if(updatedHero == null)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Something went wrong saving changes to hero.");
+            return;
+        }
+
+        MyHero = updatedHero;
+    }
+}
