@@ -1,0 +1,72 @@
+@page "/heroes"
+
+@using TourOfHeroes.Data
+@using TourOfHeroes.Interfaces;
+
+@inject IJSRuntime JSRuntime
+@inject IHeroDataService HeroRepository
+
+<link href="css/heroes.css" rel="stylesheet" />
+
+<h2>My Heroes</h2>
+
+<div>
+    <label>Hero name: <input placeholder="Hero Name" @bind="NewHeroName" /> </label>
+    <button @onclick="AddHero" >add</button>
+</div>
+
+<ul class="heroes">
+    @foreach (var hero in Heroes)
+    {
+        <li>
+            <a href="/detail/@(hero.Id)">
+                <span class="badge">@hero.Id</span>@hero.Name
+            </a>
+            <button class="delete" 
+                    title="delete hero" 
+                    @onclick="@(e => DeleteHero(hero.Id))"
+                    >x</button>
+        </li>
+    }
+</ul>
+
+
+@code 
+{
+
+    private Hero[] Heroes  {get; set;} = {};
+    
+    private string NewHeroName {get;set;}
+
+    private async Task AddHero()
+    {
+        var newHero = await HeroRepository.AddHeroAsync(NewHeroName);
+        if(newHero == null)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Something went wrong adding hero: {NewHeroName}");
+            return;
+        }
+
+        Heroes = (await HeroRepository.GetHeroesAsync());
+        NewHeroName = "";
+    }
+
+     private async Task DeleteHero(int heroId)
+    {
+        var deletedHero = await HeroRepository.DeleteHeroAsync(heroId);
+
+        if(deletedHero == null)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Something went wrong deleting hero.");
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("alert", $"Deleted hero [{deletedHero.Id}] : {deletedHero.Name}.");
+
+        Heroes = (await HeroRepository.GetHeroesAsync());
+    }
+
+    protected override async Task OnInitializedAsync()
+        => Heroes = (await HeroRepository.GetHeroesAsync());
+
+}
